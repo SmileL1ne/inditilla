@@ -1,0 +1,18 @@
+app:
+  name: 'inditilla'
+  version: '1.0.0'
+
+http:
+  port: '7000'
+  staticDir: './web/static'
+
+log:
+  level: 'info'
+
+# TODO: change all database info to actual database info
+database:
+  db_port: '7777'
+  db_host: 'localhost'
+  db_name: 'placeholder_name' 
+  db_user: 'postgres'
+  db_password: 'postgres'
