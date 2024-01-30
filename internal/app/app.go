@@ -11,7 +11,7 @@ import (
 func Run(cfg *config.Config) {
 	l := logger.New(cfg.Log.Level)
 
-	_, err := openDB(cfg.Database.URL)
+	_, err := openDB(cfg.Database.URL) // Get database connection into 'pkg'
 	if err != nil {
 		l.Fatal(err.Error())
 	}
