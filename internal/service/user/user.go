@@ -1,8 +1,13 @@
 package user
 
-import "inditilla/internal/repository/user"
+import (
+	"inditilla/internal/entity"
+	"inditilla/internal/repository/user"
+)
 
 type UserService interface {
+	SaveUser(*entity.UserSignupForm) (int, int, error)
+	Authenticate(*entity.UserLoginForm)
 }
 
 type userService struct {
