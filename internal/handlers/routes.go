@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-playground/form/v4"
 	"github.com/julienschmidt/httprouter"
+	"github.com/justinas/alice"
 )
 
 type routes struct {
@@ -24,10 +25,12 @@ func NewRouter(logger logger.ILogger, services *service.Services, formDecoder *f
 		fd: formDecoder,
 	}
 
-	router.HandlerFunc(http.MethodGet, "/v1/user/signup", r.userSignup)
-	router.HandlerFunc(http.MethodPost, "/v1/user/signup", r.userSignupPost)
-	router.HandlerFunc(http.MethodGet, "/v1/user/login", r.userLogin)
-	router.HandlerFunc(http.MethodPost, "/v1/user/login", r.userLoginPost)
+	router.HandlerFunc(http.MethodPost, "/v1/user/signup", r.userSignup)
+	router.HandlerFunc(http.MethodPost, "/v1/user/login", r.userLogin)
+
+	secured := alice.New(r.jwtAuth)
+
+	router.Handler(http.MethodGet, "/v1/user/profile", secured.ThenFunc(r.userProfile))
 
 	return router
 }

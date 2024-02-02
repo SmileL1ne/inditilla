@@ -7,12 +7,15 @@ import (
 	"inditilla/internal/handlers"
 	"inditilla/internal/repository"
 	"inditilla/internal/service"
+	"inditilla/internal/service/user"
 	"inditilla/pkg/logger"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/go-playground/form/v4"
 	"github.com/jackc/pgx/v5"
@@ -28,7 +31,12 @@ func Run(cfg *config.Config) {
 	}
 
 	r := repository.New(db)
-	s := service.New(r)
+	deadline, err := strconv.Atoi(cfg.Auth.Deadline)
+	if err != nil {
+		l.Fatal(err.Error())
+	}
+	auth := user.NewAuthorizer([]byte(cfg.Auth.SigningKey), time.Duration(deadline)*time.Second)
+	s := service.New(r, auth)
 	fd := form.NewDecoder()
 
 	logAdapter := zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Caller().Logger().Level(zerolog.ErrorLevel)

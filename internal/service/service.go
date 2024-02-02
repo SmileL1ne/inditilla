@@ -9,8 +9,8 @@ type Services struct {
 	User user.UserService
 }
 
-func New(r *repository.Repositories) *Services {
+func New(r *repository.Repositories, auth *user.Authorizer) *Services {
 	return &Services{
-		User: user.NewUserService(r.User),
+		User: user.NewUserService(r.User, auth),
 	}
 }

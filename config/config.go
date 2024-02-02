@@ -8,8 +8,9 @@ import (
 
 type (
 	Config struct {
-		App      `yaml:"app"`
-		Http     `yaml:"http"`
+		App  `yaml:"app"`
+		Http `yaml:"http"`
+		Auth
 		Log      `yaml:"log"`
 		Database `yaml:"database"`
 	}
@@ -22,6 +23,11 @@ type (
 	Http struct {
 		Port      string `env-required:"true" yaml:"port" env:"HTTP_PORT"`
 		StaticDir string `env-requited:"true" yaml:"staticDir" env:"HTTP_STATIC_DIR"`
+	}
+
+	Auth struct {
+		Deadline   string `env-required:"true" env:"AUTH_DEADLINE" env-default:"43200"` // Default value - 12 hours in seconds
+		SigningKey string `env-required:"true" env:"SIGNING_KEY"`
 	}
 
 	Log struct {

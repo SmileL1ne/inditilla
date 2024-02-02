@@ -32,7 +32,8 @@ func isRightSignUp(u *entity.UserSignupForm) bool {
 }
 
 func isRightLogin(u *entity.UserLoginForm) bool {
-	u.CheckField(validator.Matches(u.Email, EmailRX), "email", "No user with such email address")
+	u.CheckField(validator.NotBlank(u.Email), "email", "This field cannot be blank")
+	u.CheckField(validator.Matches(u.Email, EmailRX), "email", "This should valid email address")
 	u.CheckField(validator.NotBlank(u.Password), "password", "This field cannot be blank")
 
 	return u.Valid()

@@ -12,7 +12,7 @@ import (
 
 type UserRepo interface {
 	SaveUser(context.Context, entity.UserSignupForm) (int, error)
-	// GetUserByEmail(context.Context, string) *entity.UserEntity
+	Authenticate(context.Context, string, string) (*entity.UserEntity, error)
 }
 
 type userRepo struct {
@@ -50,4 +50,30 @@ func (r *userRepo) SaveUser(ctx context.Context, u entity.UserSignupForm) (int, 
 	}
 
 	return id, nil
+}
+
+func (r *userRepo) Authenticate(ctx context.Context, email string, password string) (*entity.UserEntity, error) {
+	user := &entity.UserEntity{}
+
+	query := `SELECT * FROM users WHERE email=$1`
+
+	err := r.db.QueryRow(ctx, query, email).Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.HashedPassword, &user.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return &entity.UserEntity{}, entity.ErrInvalidCredentials
+		} else {
+			return &entity.UserEntity{}, err
+		}
+	}
+
+	err = bcrypt.CompareHashAndPassword(user.HashedPassword, []byte(password))
+	if err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return &entity.UserEntity{}, entity.ErrInvalidCredentials
+		} else {
+			return &entity.UserEntity{}, err
+		}
+	}
+
+	return user, nil
 }
