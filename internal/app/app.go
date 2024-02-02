@@ -2,28 +2,65 @@ package app
 
 import (
 	"context"
+	"errors"
 	"inditilla/config"
+	"inditilla/internal/handlers"
+	"inditilla/internal/repository"
+	"inditilla/internal/service"
 	"inditilla/pkg/logger"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/go-playground/form/v4"
 	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog"
 )
 
 func Run(cfg *config.Config) {
 	l := logger.New(cfg.Log.Level)
 
-	_, err := openDB(cfg.Database.URL) // Get database connection into 'pkg'
+	db, err := openDB(cfg.Database.URL) // Get database connection into 'pkg'
 	if err != nil {
 		l.Fatal(err.Error())
 	}
 
-	// Create repository
-	// Create service
+	r := repository.New(db)
+	s := service.New(r)
+	fd := form.NewDecoder()
 
-	// Initialize server
+	logAdapter := zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Caller().Logger().Level(zerolog.ErrorLevel)
+	errLogger := log.New(logAdapter, "", 0)
 
-	// Graceful shutdown here
+	server := &http.Server{
+		Addr:     "127.0.0.1:" + cfg.Http.Port,
+		Handler:  handlers.NewRouter(l, s, fd),
+		ErrorLog: errLogger,
+	}
 
-	// Start the server
+	go func() {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+		sig := <-sigCh
+		l.Info("signal received: %s", sig.String())
+
+		if err := server.Shutdown(context.Background()); err != nil {
+			l.Fatal("server shutdown: %v", err)
+		}
+		if err := db.Close(context.Background()); err != nil {
+			l.Fatal("db connection close: %v", err)
+		}
+
+		os.Exit(0)
+	}()
+
+	l.Info("starting the server: addr - %s", server.Addr)
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		l.Fatal("listen and serve: %v", err)
+	}
 }
 
 func openDB(url string) (*pgx.Conn, error) {

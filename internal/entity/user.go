@@ -14,11 +14,11 @@ type UserEntity struct {
 }
 
 type UserSignupForm struct {
-	FirstName string
-	LastName  string
-	Email     string
-	Password  string
-	validator.Validator
+	FirstName           string `form:"firstName"`
+	LastName            string `form:"lastName"`
+	Email               string `form:"email"`
+	Password            string `form:"password"`
+	validator.Validator `form:"-"`
 }
 
 type UserLoginForm struct {

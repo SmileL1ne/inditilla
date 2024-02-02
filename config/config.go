@@ -34,7 +34,7 @@ type (
 		Name     string `yaml:"db_name" env:"DB_NAME" env-default:"postgres"`
 		User     string `yaml:"db_user" env:"DB_USER" env-default:"postgres"`
 		Password string `yaml:"db_password" env:"DB_PASSWORD"`
-		URL      string `env-requited:"true" env:"DB_URL"`
+		URL      string `env-required:"true" env:"DB_URL"`
 	}
 )
 

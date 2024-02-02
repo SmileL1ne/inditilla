@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 )
@@ -17,15 +19,15 @@ const (
 )
 
 func init() {
-	logger := zerolog.New(zerolog.NewConsoleWriter())
+	logger := zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Caller().Logger()
 
 	if err := godotenv.Load(); err != nil {
-		logger.Fatal().Err(err).Msg("migrate - error loading .env")
+		logger.Fatal().Err(err).Str("state", "error loading '.env' file").Msg("migrate")
 	}
 
 	dbURL, ok := os.LookupEnv("DB_URL") // Url in .env is empty for now
 	if !ok || len(dbURL) == 0 {
-		logger.Fatal().Str("migrate", "environment variable not declared: DB_URL")
+		logger.Fatal().Str("state", "environment variable not declared: DB_URL").Msg("migrate")
 	}
 
 	sslMode, ok := os.LookupEnv("DB_SSL_MODE")
@@ -47,24 +49,24 @@ func init() {
 			break
 		}
 
-		logger.Warn().Str("migrate", fmt.Sprintf("postgres is trying to connect, attempts left: %d", attempts))
+		logger.Warn().Str("state", fmt.Sprintf("postgres is trying to connect, attempts left: %d", attempts)).Msg("migrate")
 		time.Sleep(_defaultTimeout)
 		attempts--
 	}
 
 	if err != nil {
-		logger.Fatal().Err(err).Msg("migrate - postgres connection error")
+		logger.Fatal().Err(err).Str("state", "postgres connection").Msg("migrate")
 	}
 
 	err = m.Up()
 	defer m.Close()
 
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		logger.Fatal().Err(err).Msg("migrate - up error")
+		logger.Fatal().Err(err).Str("state", "up").Msg("migrate")
 	}
 
 	if errors.Is(err, migrate.ErrNoChange) {
-		logger.Warn().Str("migrate", "no change")
+		logger.Warn().Str("state", "no change").Msg("migrate")
 		return
 	}
 

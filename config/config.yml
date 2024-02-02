@@ -13,6 +13,6 @@ log:
 database:
   db_port: '7777'
   db_host: 'localhost'
-  db_name: 'placeholder_name' 
+  db_name: 'inditilla' 
   db_user: 'postgres'
   db_password: 'postgres'

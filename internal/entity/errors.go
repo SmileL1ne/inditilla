@@ -7,3 +7,8 @@ var (
 	ErrDuplicateEmail     = errors.New("entity: duplicate email")
 	ErrInvalidCredentials = errors.New("entity: invalid credentials")
 )
+
+type ErrorResponse struct {
+	Message string
+	Details map[string]string
+}
