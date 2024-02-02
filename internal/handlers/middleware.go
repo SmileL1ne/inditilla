@@ -15,38 +15,36 @@ func (r *routes) jwtAuth(next http.Handler) http.Handler {
 		authHeader := req.Header.Get("Authorization")
 		if authHeader == "" {
 			r.l.Error("Unauthorized")
-			// SEND ERROR RESPNONSE HERE
+			// SEND ERROR RESPONSE HERE
 			return
 		}
 
 		headerParts := strings.Split(authHeader, " ")
 		if len(headerParts) != 2 {
 			r.l.Error("Unauthorized")
-			// SEND ERROR RESPNONSE HERE
+			// SEND ERROR RESPONSE HERE
 			return
 		}
 
 		if headerParts[0] != "Bearer" {
 			r.l.Error("Unauthorized")
-			// SEND ERROR RESPNONSE HERE
+			// SEND ERROR RESPONSE HERE
 			return
 		}
 
-		claims, err := parser.ParseToken(headerParts[1], []byte(os.Getenv("SIGNING_KEY")))
-
-		if claims == nil {
+		email, err := parser.ParseToken(headerParts[1], []byte(os.Getenv("SIGNING_KEY")))
+		if email == "" {
 			if err != nil {
 				r.l.Error(err.Error())
-				// SEND ERROR RESPNONSE HERE
+				// SEND ERROR RESPONSE HERE
 				return
 			}
 			r.l.Error("Unauthorized")
-			// SEND ERROR RESPNONSE HERE
+			// SEND ERROR RESPONSE HERE
 			return
 		}
 
-		req = req.WithContext(context.WithValue(req.Context(), contextKey, claims))
-
+		req = req.WithContext(context.WithValue(req.Context(), contextKey, email))
 		next.ServeHTTP(w, req)
 	})
 }
