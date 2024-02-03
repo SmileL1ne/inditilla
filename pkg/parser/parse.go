@@ -8,7 +8,7 @@ import (
 	"github.com/dgrijalva/jwt-go/v4"
 )
 
-func ParseToken(accessToken string, signingKey []byte) (string, error) {
+func ParseToken(accessToken string, signingKey []byte) (*user.Claims, error) {
 	token, err := jwt.ParseWithClaims(accessToken, &user.Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
@@ -17,12 +17,12 @@ func ParseToken(accessToken string, signingKey []byte) (string, error) {
 	})
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if claims, ok := token.Claims.(*user.Claims); ok && token.Valid {
-		return claims.Email, nil
+		return claims, nil
 	}
 
-	return "", entity.ErrInvalidAccessToken
+	return nil, entity.ErrInvalidAccessToken
 }

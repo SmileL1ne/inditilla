@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"inditilla/pkg/parser"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 const contextKey = "user"
@@ -32,11 +34,11 @@ func (r *routes) jwtAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		email, err := parser.ParseToken(headerParts[1], []byte(os.Getenv("SIGNING_KEY")))
-		if email == "" {
+		claims, err := parser.ParseToken(headerParts[1], []byte(os.Getenv("SIGNING_KEY")))
+		if claims == nil {
 			if err != nil {
 				r.l.Error(err.Error())
-				// SEND ERROR RESPONSE HERE
+				// SEND SERVER ERROR RESPONSE HERE
 				return
 			}
 			r.l.Error("Unauthorized")
@@ -44,7 +46,26 @@ func (r *routes) jwtAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		req = req.WithContext(context.WithValue(req.Context(), contextKey, email))
+		exists, err := r.s.User.Exists(req.Context(), claims.Email)
+		if !exists {
+			if err != nil {
+				r.l.Error(err.Error())
+				// SEND SERVER ERROR RESPONSE HERE
+				return
+			}
+			r.l.Error("Unauthorized")
+			// SEND ERROR RESPONSE HERE
+			return
+		}
+
+		if time.Since(claims.ExpiresAt.Time) >= 0 {
+			fmt.Println("nah")
+			r.l.Error("Unauthorized")
+			// SEND ERROR RESPONSE HERE
+			return
+		}
+
+		req = req.WithContext(context.WithValue(req.Context(), contextKey, claims))
 		next.ServeHTTP(w, req)
 	})
 }

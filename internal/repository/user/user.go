@@ -13,6 +13,7 @@ import (
 type UserRepo interface {
 	SaveUser(context.Context, entity.UserSignupForm) (int, error)
 	Authenticate(context.Context, string, string) (*entity.UserEntity, error)
+	Exists(context.Context, string) (bool, error)
 }
 
 type userRepo struct {
@@ -76,4 +77,13 @@ func (r *userRepo) Authenticate(ctx context.Context, email string, password stri
 	}
 
 	return user, nil
+}
+
+func (r *userRepo) Exists(ctx context.Context, email string) (bool, error) {
+	var exists bool
+
+	query := `SELECT EXISTS(SELECT true FROM users WHERE email=$1)`
+	err := r.db.QueryRow(ctx, query, email).Scan(&exists)
+
+	return exists, err
 }

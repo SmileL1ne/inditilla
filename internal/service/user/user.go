@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"inditilla/internal/entity"
 	"inditilla/internal/repository/user"
+	"inditilla/internal/service/validator"
 	"net/http"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 type UserService interface {
 	SignUp(context.Context, *entity.UserSignupForm) (int, int, error)
 	SignIn(context.Context, *entity.UserLoginForm) (string, int, error)
+	Exists(context.Context, string) (bool, error)
 }
 
 type Authorizer struct {
@@ -86,4 +88,11 @@ func (us *userService) SignIn(ctx context.Context, u *entity.UserLoginForm) (str
 		return "", http.StatusInternalServerError, fmt.Errorf("token signing error: %v", err)
 	}
 	return tkn, http.StatusOK, nil
+}
+
+func (us *userService) Exists(ctx context.Context, email string) (bool, error) {
+	if !validator.Matches(email, EmailRX) {
+		return false, nil
+	}
+	return us.userRepo.Exists(ctx, email)
 }
