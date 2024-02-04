@@ -37,7 +37,7 @@ type UserSignupForm struct {
 }
 
 type UserLoginForm struct {
-	Email               string `form:"email"`
-	Password            string `form:"password"`
-	validator.Validator `form:"-"`
+	Email               string `json:"email"`
+	Password            string `json:"password"`
+	validator.Validator `json:"-"`
 }
