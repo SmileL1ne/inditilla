@@ -9,15 +9,15 @@ import (
 )
 
 func (r *routes) userSignup(w http.ResponseWriter, req *http.Request) {
-	var form entity.UserSignupForm
+	var userSignupForm entity.UserSignupForm
 
-	err := r.decodePostForm(req, &form)
+	err := r.readJSON(w, req, &userSignupForm)
 	if err != nil {
 		r.badRequest(w, req, err, "User signup")
 		return
 	}
 
-	id, err := r.s.User.SignUp(req.Context(), &form)
+	id, err := r.s.User.SignUp(req.Context(), &userSignupForm)
 	if err != nil {
 		switch {
 		case errors.Is(err, entity.ErrInvalidFormFill):
@@ -39,15 +39,15 @@ func (r *routes) userSignup(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *routes) userLogin(w http.ResponseWriter, req *http.Request) {
-	var form entity.UserLoginForm
+	var userLoginForm entity.UserLoginForm
 
-	err := r.decodePostForm(req, &form)
+	err := r.readJSON(w, req, &userLoginForm)
 	if err != nil {
 		r.badRequest(w, req, err, "User login")
 		return
 	}
 
-	token, err := r.s.User.SignIn(req.Context(), &form)
+	token, err := r.s.User.SignIn(req.Context(), &userLoginForm)
 	if err != nil {
 		switch {
 		case errors.Is(err, entity.ErrInvalidFormFill):
@@ -79,7 +79,7 @@ func (r *routes) userProfile(w http.ResponseWriter, req *http.Request) {
 		case errors.Is(err, entity.ErrNoRecord):
 			r.notFound(w, req, "User profile")
 		case errors.Is(err, entity.ErrInvalidUserId):
-			r.badRequest(w, req, err, "User profile")
+			r.notFound(w, req, "User profile")
 		default:
 			r.serverError(w, req, err, "User profile")
 		}

@@ -3,24 +3,55 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"inditilla/internal/entity"
+	"io"
 	"net/http"
-
-	"github.com/go-playground/form/v4"
+	"strings"
 )
 
-func (r *routes) decodePostForm(req *http.Request, dst any) error {
-	if err := req.ParseForm(); err != nil {
-		return err
+func (r *routes) readJSON(w http.ResponseWriter, req *http.Request, target interface{}) error {
+	maxBytes := 1_048_576
+	req.Body = http.MaxBytesReader(w, req.Body, int64(maxBytes))
+
+	decoder := json.NewDecoder(req.Body)
+	decoder.DisallowUnknownFields()
+
+	err := decoder.Decode(target)
+	if err != nil {
+		var syntaxError *json.SyntaxError
+		var unmarshalTypeError *json.UnmarshalTypeError
+		var invalidUnmarshalError *json.InvalidUnmarshalError
+		var maxBodyLen *http.MaxBytesError
+
+		switch {
+		case errors.As(err, &syntaxError):
+			return fmt.Errorf("body contains badly-formed JSON at character - %d", syntaxError.Offset)
+		case errors.Is(err, io.ErrUnexpectedEOF):
+			return errors.New("body contains badly-formed JSON")
+		case errors.As(err, &unmarshalTypeError):
+			if unmarshalTypeError.Field != "" {
+				return fmt.Errorf("body contains incorrect JSON type for field - %q", unmarshalTypeError.Field)
+			} else {
+				return fmt.Errorf("body contains incorrect JSON type at - %d", unmarshalTypeError.Offset)
+			}
+		case errors.Is(err, io.EOF):
+			return errors.New("body must not be empty")
+		case strings.HasPrefix(err.Error(), "json: unkown field "):
+			fieldName := strings.TrimPrefix(err.Error(), "json: unknown field ")
+			return fmt.Errorf("body contains unkown key - %s", fieldName)
+		case errors.As(err, &maxBodyLen):
+			return fmt.Errorf("body must not be larger than %d bytes", maxBytes)
+		case errors.As(err, &invalidUnmarshalError):
+			panic(err)
+		default:
+			return err
+		}
 	}
 
-	if err := r.fd.Decode(dst, req.PostForm); err != nil {
-		var invalidDecoderError *form.InvalidDecoderError
-		if errors.As(err, &invalidDecoderError) {
-			panic(err)
-		}
-
-		return err
+	err = decoder.Decode(&struct{}{})
+	if err != io.EOF {
+		return errors.New("body must only contain a single JSON value")
 	}
 
 	return nil

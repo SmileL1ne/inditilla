@@ -29,11 +29,11 @@ type UserProfileResponse struct {
 }
 
 type UserSignupForm struct {
-	FirstName           string `form:"firstName"`
-	LastName            string `form:"lastName"`
-	Email               string `form:"email"`
-	Password            string `form:"password"`
-	validator.Validator `form:"-"`
+	FirstName           string `json:"firstName"`
+	LastName            string `json:"lastName"`
+	Email               string `json:"email"`
+	Password            string `json:"password"`
+	validator.Validator `json:"-"`
 }
 
 type UserLoginForm struct {
