@@ -11,28 +11,32 @@ func (r *routes) userSignup(w http.ResponseWriter, req *http.Request) {
 
 	err := r.decodePostForm(req, &form)
 	if err != nil {
-		// RETURN ERROR RESPONSE JSON
 		r.l.Warn("client error - %v", err)
+		r.sendErrorResponse(w, http.StatusBadRequest, "Invalid request body", "User signup")
 		return
 	}
 
-	_, status, err := r.s.User.SignUp(req.Context(), &form)
+	id, status, err := r.s.User.SignUp(req.Context(), &form)
 	if status != http.StatusOK {
 		if status == http.StatusUnprocessableEntity {
-			r.l.Error("invalid signup form fill")
-			// RETURN ERROR RESPONSE JSON WITH 422 CODE AND WITH FORM DETAILS IN 'DETAILS' SECTION
+			r.l.Error("invalid user signup form fill")
+			r.sendErrorResponse(w, status, "Invalid user signup form fill", "User signup")
+		} else if errors.Is(err, entity.ErrDuplicateEmail) {
+			r.l.Error("user with email '%s' already exists", form.Email)
+			r.sendErrorResponse(w, http.StatusBadRequest, "Email already in use", "User signup")
 		} else {
 			r.l.Error("server error - %v", err)
-			// RETURN ERROR RESPONSE JSON
+			r.sendErrorResponse(w, http.StatusInternalServerError, err.Error(), "User signup")
 		}
 
 		return
 	}
 
-	// RETURN USER DTO
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("successfully saved user"))
+	signupResp := entity.SignupResponse{
+		UserID: id,
+	}
+
+	r.sendResponse(w, http.StatusOK, signupResp)
 }
 
 func (r *routes) userLogin(w http.ResponseWriter, req *http.Request) {
@@ -40,8 +44,8 @@ func (r *routes) userLogin(w http.ResponseWriter, req *http.Request) {
 
 	err := r.decodePostForm(req, &form)
 	if err != nil {
-		// RETURN ERROR RESPONSE JSON
 		r.l.Warn("client error - %v", err)
+		r.sendErrorResponse(w, http.StatusBadRequest, "Invalid request body", "User login")
 		return
 	}
 
@@ -49,21 +53,25 @@ func (r *routes) userLogin(w http.ResponseWriter, req *http.Request) {
 	if status != http.StatusOK {
 		if status == http.StatusUnprocessableEntity {
 			if errors.Is(err, entity.ErrInvalidCredentials) {
+				r.l.Error("email or password is incorrect")
+				r.sendErrorResponse(w, http.StatusBadRequest, "Email or password is incorrect", "User login")
 				form.AddNonFieldError("Email or password is incorrect")
 			}
 			r.l.Error("invalid login form fill")
-			// RETURN ERROR RESPONSE JSON WITH 422 CODE AND WITH FORM DETAILS IN 'DETAILS' SECTION
+			r.sendErrorResponse(w, http.StatusUnprocessableEntity, "Invalid login form fill", "User login")
 		} else {
 			r.l.Error("server error - %v", err)
-			// RETURN ERROR RESPONSE JSON
+			r.sendErrorResponse(w, http.StatusInternalServerError, err.Error(), "User login")
 		}
 
 		return
 	}
 
-	// RETURN USER DTO WITH JWT TOKEN
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("successfully saved user - " + token))
+	loginResp := entity.LoginResponse{
+		AccessToken: token,
+	}
+
+	r.sendResponse(w, http.StatusOK, loginResp)
 }
 
 func (r *routes) userProfile(w http.ResponseWriter, req *http.Request) {

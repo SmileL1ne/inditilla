@@ -84,9 +84,9 @@ func (l *Logger) log(message string, args ...interface{}) {
 func (l *Logger) msg(level string, message interface{}, args ...interface{}) {
 	switch msg := message.(type) {
 	case error:
-		l.logger.Error().Msg(msg.Error())
+		l.logger.Error().Msgf(msg.Error(), args...)
 	case string:
-		l.logger.Error().Msg(msg)
+		l.logger.Error().Msgf(msg, args...)
 	default:
 		l.log(fmt.Sprintf("%s message %v has unkown type %v", level, message, msg), args...)
 	}

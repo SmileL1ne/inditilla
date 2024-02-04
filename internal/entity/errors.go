@@ -10,6 +10,8 @@ var (
 )
 
 type ErrorResponse struct {
-	Message string
-	Details map[string]string
+	ResponseStatus string `json:"responseStatus"`
+	Code           int    `json:"code"`
+	Message        string `json:"message"`
+	Location       string `json:"location,omitempty"`
 }

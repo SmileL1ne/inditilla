@@ -18,6 +18,10 @@ type LoginResponse struct {
 	AccessToken string `json:"access_token"`
 }
 
+type SignupResponse struct {
+	UserID int `json:"user_id"`
+}
+
 type UserSignupForm struct {
 	FirstName           string `form:"firstName"`
 	LastName            string `form:"lastName"`

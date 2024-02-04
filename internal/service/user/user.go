@@ -51,11 +51,9 @@ func (us *userService) SignUp(ctx context.Context, u *entity.UserSignupForm) (in
 	id, err := us.userRepo.SaveUser(ctx, *u)
 	if err != nil {
 		if errors.Is(err, entity.ErrDuplicateEmail) {
-			u.AddFieldError("email", "Email address is already in use")
-			return 0, http.StatusUnprocessableEntity, err
-		} else {
-			return 0, http.StatusInternalServerError, err
+			return 0, http.StatusBadRequest, err
 		}
+		return 0, http.StatusInternalServerError, err
 	}
 
 	return id, http.StatusOK, nil
