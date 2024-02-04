@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"inditilla/internal/data"
 	"inditilla/internal/entity"
 	"inditilla/internal/repository/user"
 	"inditilla/internal/service/validator"
 	"strconv"
 	"time"
-
-	"github.com/dgrijalva/jwt-go/v4"
 )
 
 type UserService interface {
@@ -35,12 +34,14 @@ func NewAuthorizer(signingKey []byte, deadline time.Duration) *Authorizer {
 type userService struct {
 	userRepo user.UserRepo
 	auth     *Authorizer
+	token    *data.TokenModel
 }
 
-func NewUserService(u user.UserRepo, auth *Authorizer) *userService {
+func NewUserService(u user.UserRepo, auth *Authorizer, tokenModel *data.TokenModel) *userService {
 	return &userService{
 		userRepo: u,
 		auth:     auth,
+		token:    tokenModel,
 	}
 }
 
@@ -74,18 +75,13 @@ func (us *userService) SignIn(ctx context.Context, u *entity.UserLoginForm) (str
 		}
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: jwt.At(time.Now().Add(us.auth.deadline)),
-			IssuedAt:  jwt.At(time.Now()),
-		},
-		Email: user.Email,
-	})
+	token := us.token.New(user.Email, us.auth.deadline)
 
 	tkn, err := token.SignedString(us.auth.signingKey)
 	if err != nil {
 		return "", fmt.Errorf("token signing error: %v", err)
 	}
+
 	return tkn, nil
 }
 

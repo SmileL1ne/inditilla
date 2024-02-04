@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS email_index;
+DROP TABLE IF EXISTS users;

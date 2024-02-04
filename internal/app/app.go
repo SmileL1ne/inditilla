@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"inditilla/config"
+	"inditilla/internal/data"
 	"inditilla/internal/handlers"
 	"inditilla/internal/repository"
 	"inditilla/internal/service"
@@ -36,7 +37,8 @@ func Run(cfg *config.Config) {
 		l.Fatal(err.Error())
 	}
 	auth := user.NewAuthorizer([]byte(cfg.Auth.SigningKey), time.Duration(deadline)*time.Second)
-	s := service.New(r, auth)
+	tokenModel := &data.TokenModel{Log: l}
+	s := service.New(r, auth, tokenModel)
 	fd := form.NewDecoder()
 
 	logAdapter := zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Caller().Logger().Level(zerolog.ErrorLevel)

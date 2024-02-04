@@ -83,7 +83,12 @@ func (r *userRepo) Authenticate(ctx context.Context, email string, password stri
 func (r *userRepo) Exists(ctx context.Context, email string) (bool, error) {
 	var exists bool
 
-	query := `SELECT EXISTS(SELECT true FROM users WHERE email=$1)`
+	query := `SELECT EXISTS(
+		SELECT true 
+		FROM users 
+		WHERE users.email = $1 
+		)`
+
 	err := r.db.QueryRow(ctx, query, email).Scan(&exists)
 
 	if errors.Is(err, pgx.ErrNoRows) {

@@ -2,14 +2,14 @@ package parser
 
 import (
 	"fmt"
+	"inditilla/internal/data"
 	"inditilla/internal/entity"
-	"inditilla/internal/service/user"
 
 	"github.com/dgrijalva/jwt-go/v4"
 )
 
-func ParseToken(accessToken string, signingKey []byte) (*user.Claims, error) {
-	token, err := jwt.ParseWithClaims(accessToken, &user.Claims{}, func(token *jwt.Token) (interface{}, error) {
+func ParseToken(accessToken string, signingKey []byte) (*data.Claims, error) {
+	token, err := jwt.ParseWithClaims(accessToken, &data.Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
@@ -20,8 +20,8 @@ func ParseToken(accessToken string, signingKey []byte) (*user.Claims, error) {
 		return nil, err
 	}
 
-	if claims, ok := token.Claims.(*user.Claims); ok && token.Valid {
-		return claims, nil
+	if claims, ok := token.Claims.(*data.Claims); ok && token.Valid {
+		return claims, err
 	}
 
 	return nil, entity.ErrInvalidAccessToken

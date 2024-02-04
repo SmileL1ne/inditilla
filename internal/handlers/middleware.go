@@ -38,7 +38,7 @@ func (r *routes) jwtAuth(next http.Handler) http.Handler {
 		}
 
 		claims, err := parser.ParseToken(headerParts[1], []byte(os.Getenv("SIGNING_KEY")))
-		if claims == nil {
+		if err != nil {
 			r.l.Error(err.Error())
 			r.invalidAuthToken(w, req, "Authentcation")
 			return
