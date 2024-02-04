@@ -30,7 +30,7 @@ func NewRouter(logger logger.ILogger, services *service.Services, formDecoder *f
 
 	secured := alice.New(r.jwtAuth)
 
-	router.Handler(http.MethodGet, "/v1/user/profile", secured.ThenFunc(r.userProfile))
+	router.Handler(http.MethodGet, "/v1/user/profile/:id", secured.ThenFunc(r.userProfile))
 
 	return router
 }

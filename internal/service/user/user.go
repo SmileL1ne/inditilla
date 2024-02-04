@@ -8,6 +8,7 @@ import (
 	"inditilla/internal/repository/user"
 	"inditilla/internal/service/validator"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/dgrijalva/jwt-go/v4"
@@ -15,8 +16,9 @@ import (
 
 type UserService interface {
 	SignUp(context.Context, *entity.UserSignupForm) (int, int, error)
-	SignIn(context.Context, *entity.UserLoginForm) (string, int, error)
+	SignIn(context.Context, *entity.UserLoginForm) (string, error)
 	Exists(context.Context, string) (bool, error)
+	GetById(context.Context, string) (entity.UserProfileResponse, error)
 }
 
 type Authorizer struct {
@@ -59,17 +61,17 @@ func (us *userService) SignUp(ctx context.Context, u *entity.UserSignupForm) (in
 	return id, http.StatusOK, nil
 }
 
-func (us *userService) SignIn(ctx context.Context, u *entity.UserLoginForm) (string, int, error) {
+func (us *userService) SignIn(ctx context.Context, u *entity.UserLoginForm) (string, error) {
 	if !isRightLogin(u) {
-		return "", http.StatusUnprocessableEntity, nil
+		return "", entity.ErrInvalidFormFill
 	}
 
 	user, err := us.userRepo.Authenticate(ctx, u.Email, u.Password)
 	if err != nil {
 		if errors.Is(err, entity.ErrInvalidCredentials) {
-			return "", http.StatusUnprocessableEntity, nil
+			return "", entity.ErrInvalidCredentials
 		} else {
-			return "", http.StatusInternalServerError, err
+			return "", err
 		}
 	}
 
@@ -83,9 +85,9 @@ func (us *userService) SignIn(ctx context.Context, u *entity.UserLoginForm) (str
 
 	tkn, err := token.SignedString(us.auth.signingKey)
 	if err != nil {
-		return "", http.StatusInternalServerError, fmt.Errorf("token signing error: %v", err)
+		return "", fmt.Errorf("token signing error: %v", err)
 	}
-	return tkn, http.StatusOK, nil
+	return tkn, nil
 }
 
 func (us *userService) Exists(ctx context.Context, email string) (bool, error) {
@@ -93,4 +95,27 @@ func (us *userService) Exists(ctx context.Context, email string) (bool, error) {
 		return false, nil
 	}
 	return us.userRepo.Exists(ctx, email)
+}
+
+func (us *userService) GetById(ctx context.Context, idStr string) (entity.UserProfileResponse, error) {
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return entity.UserProfileResponse{}, entity.ErrInvalidUserId
+	}
+
+	userEntity, err := us.userRepo.GetById(ctx, id)
+	if err != nil {
+		if errors.Is(err, entity.ErrNoRecord) {
+			return entity.UserProfileResponse{}, entity.ErrNoRecord
+		}
+		return entity.UserProfileResponse{}, err
+	}
+
+	userProfile := entity.UserProfileResponse{
+		FirstName: userEntity.FirstName,
+		LastName:  userEntity.LastName,
+		Email:     userEntity.Email,
+	}
+
+	return userProfile, err
 }

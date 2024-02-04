@@ -22,6 +22,12 @@ type SignupResponse struct {
 	UserID int `json:"user_id"`
 }
 
+type UserProfileResponse struct {
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Email     string `json:"email"`
+}
+
 type UserSignupForm struct {
 	FirstName           string `form:"firstName"`
 	LastName            string `form:"lastName"`

@@ -12,8 +12,9 @@ import (
 
 type UserRepo interface {
 	SaveUser(context.Context, entity.UserSignupForm) (int, error)
-	Authenticate(context.Context, string, string) (*entity.UserEntity, error)
+	Authenticate(context.Context, string, string) (entity.UserEntity, error)
 	Exists(context.Context, string) (bool, error)
+	GetById(context.Context, int) (entity.UserEntity, error)
 }
 
 type userRepo struct {
@@ -53,26 +54,26 @@ func (r *userRepo) SaveUser(ctx context.Context, u entity.UserSignupForm) (int, 
 	return id, nil
 }
 
-func (r *userRepo) Authenticate(ctx context.Context, email string, password string) (*entity.UserEntity, error) {
-	user := &entity.UserEntity{}
+func (r *userRepo) Authenticate(ctx context.Context, email string, password string) (entity.UserEntity, error) {
+	user := entity.UserEntity{}
 
 	query := `SELECT * FROM users WHERE email=$1`
 
 	err := r.db.QueryRow(ctx, query, email).Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.HashedPassword, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return &entity.UserEntity{}, entity.ErrInvalidCredentials
+			return entity.UserEntity{}, entity.ErrInvalidCredentials
 		} else {
-			return &entity.UserEntity{}, err
+			return entity.UserEntity{}, err
 		}
 	}
 
 	err = bcrypt.CompareHashAndPassword(user.HashedPassword, []byte(password))
 	if err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-			return &entity.UserEntity{}, entity.ErrInvalidCredentials
+			return entity.UserEntity{}, entity.ErrInvalidCredentials
 		} else {
-			return &entity.UserEntity{}, err
+			return entity.UserEntity{}, err
 		}
 	}
 
@@ -86,4 +87,19 @@ func (r *userRepo) Exists(ctx context.Context, email string) (bool, error) {
 	err := r.db.QueryRow(ctx, query, email).Scan(&exists)
 
 	return exists, err
+}
+
+func (r *userRepo) GetById(ctx context.Context, id int) (entity.UserEntity, error) {
+	user := entity.UserEntity{}
+
+	query := `SELECT * FROM users WHERE id=$1`
+	err := r.db.QueryRow(ctx, query, id).Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.HashedPassword, &user.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return entity.UserEntity{}, entity.ErrNoRecord
+		}
+		return entity.UserEntity{}, err
+	}
+
+	return user, nil
 }

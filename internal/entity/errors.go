@@ -6,7 +6,9 @@ var (
 	ErrNoRecord           = errors.New("entity: no matching row found")
 	ErrDuplicateEmail     = errors.New("entity: duplicate email")
 	ErrInvalidCredentials = errors.New("entity: invalid credentials")
-	ErrInvalidAccessToken = errors.New("invalid auth token")
+	ErrInvalidFormFill    = errors.New("entity: invalid form fill")
+	ErrInvalidUserId      = errors.New("entity: invalid user id")
+	ErrInvalidAccessToken = errors.New("entity: invalid auth token")
 )
 
 type ErrorResponse struct {
