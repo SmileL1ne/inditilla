@@ -86,6 +86,10 @@ func (r *userRepo) Exists(ctx context.Context, email string) (bool, error) {
 	query := `SELECT EXISTS(SELECT true FROM users WHERE email=$1)`
 	err := r.db.QueryRow(ctx, query, email).Scan(&exists)
 
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, entity.ErrNoRecord
+	}
+
 	return exists, err
 }
 

@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"inditilla/internal/entity"
 	"net/http"
 
@@ -31,6 +30,10 @@ func (r *routes) logError(req *http.Request, err error) {
 	r.l.Error("error: %v, request_method: %s, request_url: %s", err, req.Method, req.URL.String())
 }
 
+func (r *routes) validateToken(token string) bool {
+	return token != ""
+}
+
 func (r *routes) sendResponse(w http.ResponseWriter, req *http.Request, status int, data interface{}) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -40,7 +43,10 @@ func (r *routes) sendResponse(w http.ResponseWriter, req *http.Request, status i
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	w.Write(jsonData)
+	if _, err := w.Write(jsonData); err != nil {
+		r.l.Error(err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 func (r *routes) invalidAuthToken(w http.ResponseWriter, req *http.Request, location string) {
@@ -82,9 +88,12 @@ func (r *routes) sendErrorResponse(w http.ResponseWriter, req *http.Request, sta
 		return
 	}
 
-	r.l.Error(fmt.Sprintf("message - %s, location - %s", message, location))
+	// r.l.Error(fmt.Sprintf("message - %s, location - %s", message, location))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	w.Write(jsonData)
+	if _, err := w.Write(jsonData); err != nil {
+		r.l.Error(err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }

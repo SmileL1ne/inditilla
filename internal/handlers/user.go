@@ -26,7 +26,6 @@ func (r *routes) userSignup(w http.ResponseWriter, req *http.Request) {
 			r.badRequest(w, req, err, "User signup")
 		default:
 			r.serverError(w, req, err, "User singup")
-
 		}
 
 		return

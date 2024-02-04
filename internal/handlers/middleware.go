@@ -3,12 +3,13 @@ package handlers
 import (
 	"context"
 	"errors"
-	"inditilla/internal/entity"
 	"inditilla/pkg/parser"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 const contextKey = "user"
@@ -31,19 +32,25 @@ func (r *routes) jwtAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		if isValidToken := r.validateToken(headerParts[1]); !isValidToken {
+			r.invalidAuthToken(w, req, "Authentication")
+			return
+		}
+
 		claims, err := parser.ParseToken(headerParts[1], []byte(os.Getenv("SIGNING_KEY")))
 		if claims == nil {
-			if errors.Is(err, entity.ErrInvalidAccessToken) {
-				r.invalidAuthToken(w, req, "Authentcation")
-				return
-			}
-			r.serverError(w, req, err, "Authentcation")
+			r.l.Error(err.Error())
+			r.invalidAuthToken(w, req, "Authentcation")
 			return
 		}
 
 		exists, err := r.s.User.Exists(req.Context(), claims.Email)
 		if !exists {
 			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					r.invalidAuthToken(w, req, "Authentication")
+					return
+				}
 				r.serverError(w, req, err, "Authentcation")
 				return
 			}
