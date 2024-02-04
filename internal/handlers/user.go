@@ -13,22 +13,20 @@ func (r *routes) userSignup(w http.ResponseWriter, req *http.Request) {
 
 	err := r.decodePostForm(req, &form)
 	if err != nil {
-		r.l.Warn("client error - %v", err)
-		r.sendErrorResponse(w, http.StatusBadRequest, "Invalid request body", "User signup")
+		r.badRequest(w, req, err, "User signup")
 		return
 	}
 
-	id, status, err := r.s.User.SignUp(req.Context(), &form)
-	if status != http.StatusOK {
-		if status == http.StatusUnprocessableEntity {
-			r.l.Error("invalid user signup form fill")
-			r.sendErrorResponse(w, status, "Invalid user signup form fill", "User signup")
-		} else if errors.Is(err, entity.ErrDuplicateEmail) {
-			r.l.Error("user with email '%s' already exists", form.Email)
-			r.sendErrorResponse(w, http.StatusBadRequest, "Email already in use", "User signup")
-		} else {
-			r.l.Error("server error - %v", err)
-			r.sendErrorResponse(w, http.StatusInternalServerError, err.Error(), "User signup")
+	id, err := r.s.User.SignUp(req.Context(), &form)
+	if err != nil {
+		switch {
+		case errors.Is(err, entity.ErrInvalidFormFill):
+			r.unprocessableEntity(w, req, "User signup")
+		case errors.Is(err, entity.ErrDuplicateEmail):
+			r.badRequest(w, req, err, "User signup")
+		default:
+			r.serverError(w, req, err, "User singup")
+
 		}
 
 		return
@@ -38,7 +36,7 @@ func (r *routes) userSignup(w http.ResponseWriter, req *http.Request) {
 		UserID: id,
 	}
 
-	r.sendResponse(w, http.StatusOK, signupResp)
+	r.sendResponse(w, req, http.StatusOK, signupResp)
 }
 
 func (r *routes) userLogin(w http.ResponseWriter, req *http.Request) {
@@ -46,8 +44,7 @@ func (r *routes) userLogin(w http.ResponseWriter, req *http.Request) {
 
 	err := r.decodePostForm(req, &form)
 	if err != nil {
-		r.l.Warn("client error - %v", err)
-		r.sendErrorResponse(w, http.StatusBadRequest, "Invalid request body", "User login")
+		r.badRequest(w, req, err, "User login")
 		return
 	}
 
@@ -55,16 +52,13 @@ func (r *routes) userLogin(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, entity.ErrInvalidFormFill):
-			r.l.Error("invalid login form fill")
-			r.sendErrorResponse(w, http.StatusUnprocessableEntity, "Invalid login form fill", "User login")
+			r.unprocessableEntity(w, req, "User login")
 		case errors.Is(err, entity.ErrInvalidCredentials):
-			r.l.Error("email or password is incorrect")
-			r.sendErrorResponse(w, http.StatusBadRequest, "Email or password is incorrect", "User login")
-			form.AddNonFieldError("Email or password is incorrect")
+			r.badRequest(w, req, err, "User login")
 		default:
-			r.l.Error("server error - %v", err)
-			r.sendErrorResponse(w, http.StatusInternalServerError, err.Error(), "User login")
+			r.serverError(w, req, err, "User login")
 		}
+
 		return
 	}
 
@@ -72,7 +66,7 @@ func (r *routes) userLogin(w http.ResponseWriter, req *http.Request) {
 		AccessToken: token,
 	}
 
-	r.sendResponse(w, http.StatusOK, loginResp)
+	r.sendResponse(w, req, http.StatusCreated, loginResp)
 }
 
 func (r *routes) userProfile(w http.ResponseWriter, req *http.Request) {
@@ -84,16 +78,15 @@ func (r *routes) userProfile(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, entity.ErrNoRecord):
-			r.l.Error("no user with id - %s", id)
-			r.sendErrorResponse(w, http.StatusNotFound, "No user with that id", "User profile")
+			r.notFound(w, req, "User profile")
 		case errors.Is(err, entity.ErrInvalidUserId):
-			r.l.Error("invalid user id - %s", id)
-			r.sendErrorResponse(w, http.StatusBadRequest, "Invalid user id", "User profile")
+			r.badRequest(w, req, err, "User profile")
 		default:
-			r.l.Error("server error - %v", err)
-			r.sendErrorResponse(w, http.StatusInternalServerError, err.Error(), "User profile")
+			r.serverError(w, req, err, "User profile")
 		}
+
+		return
 	}
 
-	r.sendResponse(w, http.StatusOK, user)
+	r.sendResponse(w, req, http.StatusOK, user)
 }

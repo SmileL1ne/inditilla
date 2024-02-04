@@ -7,7 +7,6 @@ import (
 	"inditilla/internal/entity"
 	"inditilla/internal/repository/user"
 	"inditilla/internal/service/validator"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 )
 
 type UserService interface {
-	SignUp(context.Context, *entity.UserSignupForm) (int, int, error)
+	SignUp(context.Context, *entity.UserSignupForm) (int, error)
 	SignIn(context.Context, *entity.UserLoginForm) (string, error)
 	Exists(context.Context, string) (bool, error)
 	GetById(context.Context, string) (entity.UserProfileResponse, error)
@@ -45,20 +44,20 @@ func NewUserService(u user.UserRepo, auth *Authorizer) *userService {
 	}
 }
 
-func (us *userService) SignUp(ctx context.Context, u *entity.UserSignupForm) (int, int, error) {
+func (us *userService) SignUp(ctx context.Context, u *entity.UserSignupForm) (int, error) {
 	if !isRightSignUp(u) {
-		return 0, http.StatusUnprocessableEntity, nil
+		return 0, entity.ErrInvalidFormFill
 	}
 
 	id, err := us.userRepo.SaveUser(ctx, *u)
 	if err != nil {
 		if errors.Is(err, entity.ErrDuplicateEmail) {
-			return 0, http.StatusBadRequest, err
+			return 0, entity.ErrDuplicateEmail
 		}
-		return 0, http.StatusInternalServerError, err
+		return 0, err
 	}
 
-	return id, http.StatusOK, nil
+	return id, nil
 }
 
 func (us *userService) SignIn(ctx context.Context, u *entity.UserLoginForm) (string, error) {
