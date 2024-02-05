@@ -155,11 +155,16 @@ func (r *routes) userUpdate(w http.ResponseWriter, req *http.Request) {
 
 	err = r.s.User.Update(req.Context(), &user, isPasswordChanged)
 	if err != nil {
-		if errors.Is(err, entity.ErrEditConflict) {
+		switch {
+		case errors.Is(err, entity.ErrEditConflict):
 			r.editConflict(w, req, user.FieldErrors, "User update")
-			return
+		case errors.Is(err, entity.ErrInvalidInputData):
+			r.unprocessableEntity(w, req, user.FieldErrors, "User update")
+		default:
+			r.serverError(w, req, err, "User update")
 		}
-		r.serverError(w, req, err, "User update")
+
+		return
 	}
 
 	userProfile := entity.UserProfileResponse{
