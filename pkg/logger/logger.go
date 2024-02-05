@@ -2,7 +2,9 @@ package logger
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -20,9 +22,12 @@ type Logger struct {
 	logger *zerolog.Logger
 }
 
+// This ensures that Logger struct implements ILogger interface
 var _ ILogger = (*Logger)(nil)
 
-func New(lvl string) *Logger {
+// New returns new logger with specified level and file closing function
+// that should be defered when this function is called
+func New(lvl string) (*Logger, func() error) {
 	var l zerolog.Level
 
 	switch strings.ToLower(lvl) {
@@ -40,11 +45,27 @@ func New(lvl string) *Logger {
 
 	zerolog.SetGlobalLevel(l)
 
-	logger := zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Caller().Logger()
+	// Get log file full path to open/create log file to save logs
+	curDir, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("error getting working directory: %v", err)
+	}
+	logFilePath := "logs.txt"
+	fullLogFilePath := filepath.Join(curDir, logFilePath)
+
+	// Open/Create file to save logs (where also user activity is tracked)
+	fileWriter, err := os.OpenFile(fullLogFilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+
+	// Create new logger with 2 outputs - console and log file
+	multi := zerolog.MultiLevelWriter(zerolog.NewConsoleWriter(), fileWriter)
+	logger := zerolog.New(multi).With().Timestamp().Caller().Logger()
 
 	return &Logger{
 		logger: &logger,
-	}
+	}, fileWriter.Close
 }
 
 func (l *Logger) Info(message string, args ...interface{}) {

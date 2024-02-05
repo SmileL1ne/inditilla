@@ -24,9 +24,12 @@ import (
 )
 
 func Run(cfg *config.Config) {
-	l := logger.New(cfg.Log.Level)
+	// Initialize new logger
+	l, closeFile := logger.New(cfg.Log.Level)
+	defer closeFile()
 
-	db, err := openDB(cfg.Database.URL) // Get database connection into 'pkg'
+	// Open database connection
+	db, err := openDB(cfg.Database.URL)
 	if err != nil {
 		l.Fatal(err.Error())
 	}
