@@ -17,7 +17,7 @@ type UserService interface {
 	SignIn(context.Context, *entity.UserLoginForm) (string, error)
 	Exists(context.Context, string) (bool, error)
 	GetById(context.Context, string) (entity.UserEntity, error)
-	Update(context.Context, *entity.UserEntity) error
+	Update(context.Context, *entity.UserEntity, bool) error
 }
 
 type Authorizer struct {
@@ -69,11 +69,7 @@ func (us *userService) SignIn(ctx context.Context, u *entity.UserLoginForm) (str
 
 	user, err := us.userRepo.Authenticate(ctx, u.Email, u.Password)
 	if err != nil {
-		if errors.Is(err, entity.ErrInvalidCredentials) {
-			return "", entity.ErrInvalidCredentials
-		} else {
-			return "", err
-		}
+		return "", err
 	}
 
 	token := us.token.New(user.Email, us.auth.deadline)
@@ -101,19 +97,16 @@ func (us *userService) GetById(ctx context.Context, idStr string) (entity.UserEn
 
 	userEntity, err := us.userRepo.GetById(ctx, id)
 	if err != nil {
-		if errors.Is(err, entity.ErrNoRecord) {
-			return entity.UserEntity{}, entity.ErrNoRecord
-		}
 		return entity.UserEntity{}, err
 	}
 
 	return userEntity, err
 }
 
-func (us *userService) Update(ctx context.Context, user *entity.UserEntity) error {
+func (us *userService) Update(ctx context.Context, user *entity.UserEntity, isPasswordChanged bool) error {
 	if !isRightUser(user) {
 		return entity.ErrInvalidInputData
 	}
 
-	return us.userRepo.Update(ctx, user)
+	return us.userRepo.Update(ctx, user, isPasswordChanged)
 }

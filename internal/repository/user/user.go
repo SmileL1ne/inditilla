@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"errors"
+	"fmt"
 	"inditilla/internal/entity"
 	"time"
 
@@ -16,7 +17,7 @@ type UserRepo interface {
 	Authenticate(context.Context, string, string) (entity.UserEntity, error)
 	Exists(context.Context, string) (bool, error)
 	GetById(context.Context, int) (entity.UserEntity, error)
-	Update(context.Context, *entity.UserEntity) error
+	Update(context.Context, *entity.UserEntity, bool) error
 }
 
 type userRepo struct {
@@ -74,6 +75,7 @@ func (r *userRepo) Authenticate(ctx context.Context, email string, password stri
 	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 	if err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			fmt.Println("nah")
 			return entity.UserEntity{}, entity.ErrInvalidCredentials
 		} else {
 			return entity.UserEntity{}, err
@@ -119,10 +121,14 @@ func (r *userRepo) GetById(ctx context.Context, id int) (entity.UserEntity, erro
 	return user, nil
 }
 
-func (r *userRepo) Update(ctx context.Context, user *entity.UserEntity) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 15)
-	if err != nil {
-		return err
+func (r *userRepo) Update(ctx context.Context, user *entity.UserEntity, isPasswordChanged bool) error {
+	var err error
+	hashedPassword := []byte(user.Password)
+	if isPasswordChanged {
+		hashedPassword, err = bcrypt.GenerateFromPassword([]byte(user.Password), 15)
+		if err != nil {
+			return err
+		}
 	}
 
 	query := `

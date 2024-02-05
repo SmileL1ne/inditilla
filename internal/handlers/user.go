@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"inditilla/internal/entity"
 	"net/http"
+	"time"
 )
 
 func (r *routes) userSignup(w http.ResponseWriter, req *http.Request) {
@@ -64,6 +66,8 @@ func (r *routes) userLogin(w http.ResponseWriter, req *http.Request) {
 	}
 
 	r.sendResponse(w, req, http.StatusCreated, loginResp)
+
+	r.l.Info("user with email '%s' logged at %s", userLoginForm.Email, time.Now().Format("2006-01-02 15:04:05"))
 }
 
 func (r *routes) userProfile(w http.ResponseWriter, req *http.Request) {
@@ -122,20 +126,28 @@ func (r *routes) userUpdate(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	updatedFieldsLog := []string{}
+	isPasswordChanged := false
+
 	if input.FirstName != nil {
+		updatedFieldsLog = append(updatedFieldsLog, fmt.Sprintf("firstName:'%s'->'%s'", user.FirstName, *input.FirstName))
 		user.FirstName = *input.FirstName
 	}
 	if input.LastName != nil {
+		updatedFieldsLog = append(updatedFieldsLog, fmt.Sprintf("lastName:'%s'->'%s'", user.LastName, *input.LastName))
 		user.LastName = *input.LastName
 	}
 	if input.Email != nil {
+		updatedFieldsLog = append(updatedFieldsLog, fmt.Sprintf("email:'%s'->'%s'", user.Email, *input.Email))
 		user.Email = *input.Email
 	}
 	if input.Password != nil {
-		user.Email = *input.Email
+		isPasswordChanged = true
+		updatedFieldsLog = append(updatedFieldsLog, "updated password")
+		user.Password = *input.Password
 	}
 
-	err = r.s.User.Update(req.Context(), &user)
+	err = r.s.User.Update(req.Context(), &user, isPasswordChanged)
 	if err != nil {
 		if errors.Is(err, entity.ErrEditConflict) {
 			r.editConflict(w, req, user.FieldErrors, "User update")
@@ -151,4 +163,6 @@ func (r *routes) userUpdate(w http.ResponseWriter, req *http.Request) {
 	}
 
 	r.sendResponse(w, req, http.StatusOK, userProfile)
+
+	r.l.Info("user with id '%d' made next changes in profile page: %v", user.Id, updatedFieldsLog)
 }
