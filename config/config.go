@@ -44,6 +44,8 @@ type (
 	}
 )
 
+// NewConfig parses provided .yml configuration and environment files
+// into custom Config struct and returns it
 func NewConfig() (*Config, error) {
 	cfg := &Config{}
 
@@ -52,7 +54,7 @@ func NewConfig() (*Config, error) {
 	}
 
 	if err := cleanenv.ReadEnv(cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("environment file error: %v", err)
 	}
 
 	return cfg, nil

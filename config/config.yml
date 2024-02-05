@@ -9,7 +9,7 @@ http:
 log:
   level: 'info'
 
-# TODO: change all database info to actual database info
+# Change all database info to actual database info
 database:
   db_port: '7777'
   db_host: 'localhost'

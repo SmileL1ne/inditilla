@@ -6,6 +6,7 @@ import (
 	"log"
 )
 
+// Get config and run application with that config
 func main() {
 	cfg, err := config.NewConfig()
 	if err != nil {

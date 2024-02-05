@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+var timeFormat = "2006-01-02 15:04:05"
+
 func (r *routes) userSignup(w http.ResponseWriter, req *http.Request) {
 	var userSignupForm entity.UserSignupForm
 
@@ -36,6 +38,9 @@ func (r *routes) userSignup(w http.ResponseWriter, req *http.Request) {
 	}
 
 	r.sendResponse(w, req, http.StatusOK, signupResp)
+
+	// Log new user sign up
+	r.l.Info("new user with id '%d' signed up at %s", id, time.Now().Format(timeFormat))
 }
 
 func (r *routes) userLogin(w http.ResponseWriter, req *http.Request) {
@@ -67,7 +72,8 @@ func (r *routes) userLogin(w http.ResponseWriter, req *http.Request) {
 
 	r.sendResponse(w, req, http.StatusCreated, loginResp)
 
-	r.l.Info("user with email '%s' logged at %s", userLoginForm.Email, time.Now().Format("2006-01-02 15:04:05"))
+	// Log user log in
+	r.l.Info("user with email '%s' logged at %s", userLoginForm.Email, time.Now().Format(timeFormat))
 }
 
 func (r *routes) userProfile(w http.ResponseWriter, req *http.Request) {
@@ -164,5 +170,6 @@ func (r *routes) userUpdate(w http.ResponseWriter, req *http.Request) {
 
 	r.sendResponse(w, req, http.StatusOK, userProfile)
 
-	r.l.Info("user with id '%d' made next changes in profile page: %v", user.Id, updatedFieldsLog)
+	// Log user profile changes
+	r.l.Info("user with id '%d' made next changes at %s in profile page: %v", user.Id, time.Now().Format(timeFormat), updatedFieldsLog)
 }

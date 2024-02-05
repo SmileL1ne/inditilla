@@ -18,6 +18,7 @@ const (
 	_defaultTimeout  = time.Second
 )
 
+// Initialize database migration up before start of the server
 func init() {
 	logger := zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Caller().Logger()
 

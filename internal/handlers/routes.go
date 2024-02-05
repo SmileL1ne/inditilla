@@ -16,13 +16,12 @@ type routes struct {
 	fd *form.Decoder
 }
 
-func NewRouter(logger logger.ILogger, services *service.Services, formDecoder *form.Decoder) http.Handler {
+func NewRouter(logger logger.ILogger, services *service.Services) http.Handler {
 	router := httprouter.New()
 
 	r := &routes{
-		l:  logger,
-		s:  services,
-		fd: formDecoder,
+		l: logger,
+		s: services,
 	}
 
 	router.HandlerFunc(http.MethodPost, "/v1/user/signup", r.userSignup)

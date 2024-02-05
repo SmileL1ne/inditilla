@@ -6,6 +6,8 @@ import (
 	"unicode/utf8"
 )
 
+// Validator checks and validates user data and stores erros in
+// FieldErrors map if there any
 type Validator struct {
 	FieldErrors map[string]string
 }

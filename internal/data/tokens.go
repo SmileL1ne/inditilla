@@ -16,6 +16,7 @@ type Claims struct {
 	Email string `json:"email"`
 }
 
+// New returns new jwt token with custom claims consisting of expiration date and user email
 func (t *TokenModel) New(email string, deadline time.Duration) *jwt.Token {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
 		StandardClaims: jwt.StandardClaims{

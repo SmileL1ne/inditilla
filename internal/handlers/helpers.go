@@ -12,6 +12,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+// readJSON decodes request body into given 'target'. It checks for any potential errors
+// occured while decoding json and returns custom formatted error message
 func (r *routes) readJSON(w http.ResponseWriter, req *http.Request, target interface{}) error {
 	maxBytes := 1_048_576
 	req.Body = http.MaxBytesReader(w, req.Body, int64(maxBytes))
@@ -110,6 +112,9 @@ func (r *routes) serverError(w http.ResponseWriter, req *http.Request, err error
 	r.sendErrorResponse(w, req, http.StatusInternalServerError, "server encountered an error and could not process your request", nil, location)
 }
 
+// sendErrorResponse creates error response by given parameters and sends json error response.
+// It returns validation errors if there is any. If error occurs sending error response an empty
+// body would be sent with http.StatusInternalServerError header
 func (r *routes) sendErrorResponse(w http.ResponseWriter, req *http.Request, status int, message string, validations map[string]string, location string) {
 	errResp := entity.ErrorResponse{
 		ResponseStatus: "fail",
@@ -129,8 +134,6 @@ func (r *routes) sendErrorResponse(w http.ResponseWriter, req *http.Request, sta
 		return
 	}
 
-	// r.l.Error(fmt.Sprintf("message - %s, location - %s", message, location))
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if _, err := w.Write(jsonData); err != nil {
@@ -139,6 +142,7 @@ func (r *routes) sendErrorResponse(w http.ResponseWriter, req *http.Request, sta
 	}
 }
 
+// retrieveParamId retrieves and returns user id from request parameters
 func (r *routes) retrieveParamId(req *http.Request) string {
 	req.URL.Path = httprouter.CleanPath(req.URL.Path)
 	params := httprouter.ParamsFromContext(req.Context())

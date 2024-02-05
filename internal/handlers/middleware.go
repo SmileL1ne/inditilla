@@ -14,6 +14,11 @@ import (
 
 const contextKey = "user"
 
+// jwtAuth is a middleware that authenticates user by given jwt token.
+// It returns 401 Status Unauthorized if no token given or it is invalid
+//
+// (for just viewing resource, it may be considered to set user as 'anonymous'
+// if no token is provided)
 func (r *routes) jwtAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Vary", "Authorization")
@@ -24,8 +29,9 @@ func (r *routes) jwtAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		// Additionally, may let user in as anonymous user here
+		/* Additionally, may let user in as anonymous user here */
 
+		// If token is present check and validate it
 		headerParts := strings.Split(authHeader, " ")
 		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
 			r.invalidAuthToken(w, req, "Authentcation")
@@ -37,13 +43,15 @@ func (r *routes) jwtAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		// Parse token with signing key from environment file
 		claims, err := parser.ParseToken(headerParts[1], []byte(os.Getenv("SIGNING_KEY")))
 		if err != nil {
-			r.l.Error(err.Error())
+			r.l.Error("jwtAuth: %v", err)
 			r.invalidAuthToken(w, req, "Authentcation")
 			return
 		}
 
+		// Check if such user exists
 		exists, err := r.s.User.Exists(req.Context(), claims.Email)
 		if !exists {
 			if err != nil {
@@ -58,11 +66,13 @@ func (r *routes) jwtAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		// Check if token is not expired
 		if time.Since(claims.ExpiresAt.Time) >= 0 {
 			r.invalidAuthToken(w, req, "Authentcation")
 			return
 		}
 
+		// Put claims to request's context by custom context key
 		req = req.WithContext(context.WithValue(req.Context(), contextKey, claims))
 		next.ServeHTTP(w, req)
 	})
