@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 func (r *routes) readJSON(w http.ResponseWriter, req *http.Request, target interface{}) error {
@@ -68,7 +70,7 @@ func (r *routes) validateToken(token string) bool {
 func (r *routes) sendResponse(w http.ResponseWriter, req *http.Request, status int, data interface{}) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		r.sendErrorResponse(w, req, http.StatusInternalServerError, "Error marshaling response", "Response send")
+		r.sendErrorResponse(w, req, http.StatusInternalServerError, "Error marshaling response", nil, "Response send")
 		return
 	}
 
@@ -83,33 +85,41 @@ func (r *routes) sendResponse(w http.ResponseWriter, req *http.Request, status i
 func (r *routes) invalidAuthToken(w http.ResponseWriter, req *http.Request, location string) {
 	w.Header().Set("WWW-Authenticate", "Bearer")
 
-	r.sendErrorResponse(w, req, http.StatusUnauthorized, "invalid or missing authentication token", location)
+	r.sendErrorResponse(w, req, http.StatusUnauthorized, "invalid or missing authentication token", nil, location)
 }
 
-func (r *routes) unprocessableEntity(w http.ResponseWriter, req *http.Request, location string) {
-	r.sendErrorResponse(w, req, http.StatusUnprocessableEntity, "invalid form fill", location)
+func (r *routes) editConflict(w http.ResponseWriter, req *http.Request, validations map[string]string, location string) {
+	r.sendErrorResponse(w, req, http.StatusConflict, "unable to update the record due to an edit conflict, please try again", validations, location)
+}
+
+func (r *routes) unprocessableEntity(w http.ResponseWriter, req *http.Request, validations map[string]string, location string) {
+	r.sendErrorResponse(w, req, http.StatusUnprocessableEntity, "invalid form fill", nil, location)
 }
 
 func (r *routes) notFound(w http.ResponseWriter, req *http.Request, location string) {
-	r.sendErrorResponse(w, req, http.StatusNotFound, "requested resource could not be found", location)
+	r.sendErrorResponse(w, req, http.StatusNotFound, "requested resource could not be found", nil, location)
 }
 
 func (r *routes) badRequest(w http.ResponseWriter, req *http.Request, err error, location string) {
-	r.sendErrorResponse(w, req, http.StatusBadRequest, err.Error(), location)
+	r.sendErrorResponse(w, req, http.StatusBadRequest, err.Error(), nil, location)
 }
 
 func (r *routes) serverError(w http.ResponseWriter, req *http.Request, err error, location string) {
 	r.logError(req, err)
 
-	r.sendErrorResponse(w, req, http.StatusInternalServerError, "server encountered an error and could not process your request", location)
+	r.sendErrorResponse(w, req, http.StatusInternalServerError, "server encountered an error and could not process your request", nil, location)
 }
 
-func (r *routes) sendErrorResponse(w http.ResponseWriter, req *http.Request, status int, message string, location string) {
+func (r *routes) sendErrorResponse(w http.ResponseWriter, req *http.Request, status int, message string, validations map[string]string, location string) {
 	errResp := entity.ErrorResponse{
 		ResponseStatus: "fail",
 		Code:           status,
 		Message:        message,
 		Location:       location,
+	}
+
+	if validations != nil {
+		errResp.Validations = validations
 	}
 
 	jsonData, err := json.Marshal(errResp)
@@ -127,4 +137,10 @@ func (r *routes) sendErrorResponse(w http.ResponseWriter, req *http.Request, sta
 		r.l.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+}
+
+func (r *routes) retrieveParamId(req *http.Request) string {
+	req.URL.Path = httprouter.CleanPath(req.URL.Path)
+	params := httprouter.ParamsFromContext(req.Context())
+	return params.ByName("id")
 }

@@ -38,3 +38,14 @@ func isRightLogin(u *entity.UserLoginForm) bool {
 
 	return u.Valid()
 }
+
+func isRightUser(u *entity.UserEntity) bool {
+	u.CheckField(validator.NotBlank(u.FirstName), "firstName", "must be provided")
+	u.CheckField(validator.MaxChar(u.FirstName, 255), "firstName", "must not be more than 255 bytes long")
+	u.CheckField(validator.NotBlank(u.LastName), "lastName", "must be provided")
+	u.CheckField(validator.MaxChar(u.LastName, 255), "lastName", "must not be more than 255 bytes long")
+	u.CheckField(validator.NotBlank(u.Email), "email", "must be provided")
+	u.CheckField(validator.MaxChar(u.Email, 255), "email", "must not be more than 255 bytes long")
+
+	return u.Valid()
+}

@@ -16,7 +16,8 @@ type UserService interface {
 	SignUp(context.Context, *entity.UserSignupForm) (int, error)
 	SignIn(context.Context, *entity.UserLoginForm) (string, error)
 	Exists(context.Context, string) (bool, error)
-	GetById(context.Context, string) (entity.UserProfileResponse, error)
+	GetById(context.Context, string) (entity.UserEntity, error)
+	Update(context.Context, *entity.UserEntity) error
 }
 
 type Authorizer struct {
@@ -47,7 +48,7 @@ func NewUserService(u user.UserRepo, auth *Authorizer, tokenModel *data.TokenMod
 
 func (us *userService) SignUp(ctx context.Context, u *entity.UserSignupForm) (int, error) {
 	if !isRightSignUp(u) {
-		return 0, entity.ErrInvalidFormFill
+		return 0, entity.ErrInvalidInputData
 	}
 
 	id, err := us.userRepo.SaveUser(ctx, *u)
@@ -63,7 +64,7 @@ func (us *userService) SignUp(ctx context.Context, u *entity.UserSignupForm) (in
 
 func (us *userService) SignIn(ctx context.Context, u *entity.UserLoginForm) (string, error) {
 	if !isRightLogin(u) {
-		return "", entity.ErrInvalidFormFill
+		return "", entity.ErrInvalidInputData
 	}
 
 	user, err := us.userRepo.Authenticate(ctx, u.Email, u.Password)
@@ -92,25 +93,27 @@ func (us *userService) Exists(ctx context.Context, email string) (bool, error) {
 	return us.userRepo.Exists(ctx, email)
 }
 
-func (us *userService) GetById(ctx context.Context, idStr string) (entity.UserProfileResponse, error) {
+func (us *userService) GetById(ctx context.Context, idStr string) (entity.UserEntity, error) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		return entity.UserProfileResponse{}, entity.ErrInvalidUserId
+		return entity.UserEntity{}, entity.ErrInvalidUserId
 	}
 
 	userEntity, err := us.userRepo.GetById(ctx, id)
 	if err != nil {
 		if errors.Is(err, entity.ErrNoRecord) {
-			return entity.UserProfileResponse{}, entity.ErrNoRecord
+			return entity.UserEntity{}, entity.ErrNoRecord
 		}
-		return entity.UserProfileResponse{}, err
+		return entity.UserEntity{}, err
 	}
 
-	userProfile := entity.UserProfileResponse{
-		FirstName: userEntity.FirstName,
-		LastName:  userEntity.LastName,
-		Email:     userEntity.Email,
+	return userEntity, err
+}
+
+func (us *userService) Update(ctx context.Context, user *entity.UserEntity) error {
+	if !isRightUser(user) {
+		return entity.ErrInvalidInputData
 	}
 
-	return userProfile, err
+	return us.userRepo.Update(ctx, user)
 }

@@ -4,8 +4,6 @@ import (
 	"errors"
 	"inditilla/internal/entity"
 	"net/http"
-
-	"github.com/julienschmidt/httprouter"
 )
 
 func (r *routes) userSignup(w http.ResponseWriter, req *http.Request) {
@@ -20,8 +18,8 @@ func (r *routes) userSignup(w http.ResponseWriter, req *http.Request) {
 	id, err := r.s.User.SignUp(req.Context(), &userSignupForm)
 	if err != nil {
 		switch {
-		case errors.Is(err, entity.ErrInvalidFormFill):
-			r.unprocessableEntity(w, req, "User signup")
+		case errors.Is(err, entity.ErrInvalidInputData):
+			r.unprocessableEntity(w, req, userSignupForm.Validator.FieldErrors, "User signup")
 		case errors.Is(err, entity.ErrDuplicateEmail):
 			r.badRequest(w, req, err, "User signup")
 		default:
@@ -50,8 +48,8 @@ func (r *routes) userLogin(w http.ResponseWriter, req *http.Request) {
 	token, err := r.s.User.SignIn(req.Context(), &userLoginForm)
 	if err != nil {
 		switch {
-		case errors.Is(err, entity.ErrInvalidFormFill):
-			r.unprocessableEntity(w, req, "User login")
+		case errors.Is(err, entity.ErrInvalidInputData):
+			r.unprocessableEntity(w, req, userLoginForm.Validator.FieldErrors, "User login")
 		case errors.Is(err, entity.ErrInvalidCredentials):
 			r.badRequest(w, req, err, "User login")
 		default:
@@ -69,9 +67,7 @@ func (r *routes) userLogin(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *routes) userProfile(w http.ResponseWriter, req *http.Request) {
-	req.URL.Path = httprouter.CleanPath(req.URL.Path)
-	params := httprouter.ParamsFromContext(req.Context())
-	id := params.ByName("id")
+	id := r.retrieveParamId(req)
 
 	user, err := r.s.User.GetById(req.Context(), id)
 	if err != nil {
@@ -87,5 +83,72 @@ func (r *routes) userProfile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	r.sendResponse(w, req, http.StatusOK, user)
+	userProfile := entity.UserProfileResponse{
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     user.Email,
+	}
+
+	r.sendResponse(w, req, http.StatusOK, userProfile)
+}
+
+func (r *routes) userUpdate(w http.ResponseWriter, req *http.Request) {
+	id := r.retrieveParamId(req)
+
+	user, err := r.s.User.GetById(req.Context(), id)
+	if err != nil {
+		switch {
+		case errors.Is(err, entity.ErrNoRecord):
+			r.notFound(w, req, "User update")
+		case errors.Is(err, entity.ErrInvalidUserId):
+			r.notFound(w, req, "User update")
+		default:
+			r.serverError(w, req, err, "User update")
+		}
+
+		return
+	}
+
+	var input struct {
+		FirstName *string `json:"firstName"`
+		LastName  *string `json:"lastName"`
+		Email     *string `json:"email"`
+		Password  *string `json:"password"`
+	}
+
+	err = r.readJSON(w, req, &input)
+	if err != nil {
+		r.badRequest(w, req, err, "User update")
+		return
+	}
+
+	if input.FirstName != nil {
+		user.FirstName = *input.FirstName
+	}
+	if input.LastName != nil {
+		user.LastName = *input.LastName
+	}
+	if input.Email != nil {
+		user.Email = *input.Email
+	}
+	if input.Password != nil {
+		user.Email = *input.Email
+	}
+
+	err = r.s.User.Update(req.Context(), &user)
+	if err != nil {
+		if errors.Is(err, entity.ErrEditConflict) {
+			r.editConflict(w, req, user.FieldErrors, "User update")
+			return
+		}
+		r.serverError(w, req, err, "User update")
+	}
+
+	userProfile := entity.UserProfileResponse{
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     user.Email,
+	}
+
+	r.sendResponse(w, req, http.StatusOK, userProfile)
 }

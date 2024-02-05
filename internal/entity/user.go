@@ -6,12 +6,13 @@ import (
 )
 
 type UserEntity struct {
-	Id             int
-	FirstName      string
-	LastName       string
-	Email          string
-	HashedPassword []byte
-	CreatedAt      time.Time
+	Id                  int       `json:"id"`
+	FirstName           string    `json:"firstName"`
+	LastName            string    `json:"lastName"`
+	Email               string    `json:"email"`
+	Password            string    `json:"-"`
+	CreatedAt           time.Time `json:"createdAt"`
+	validator.Validator `json:"-"`
 }
 
 type LoginResponse struct {
