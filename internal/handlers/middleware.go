@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"inditilla/pkg/parser"
 	"net/http"
 	"os"
@@ -74,6 +75,31 @@ func (r *routes) jwtAuth(next http.Handler) http.Handler {
 
 		// Put claims to request's context by custom context key
 		req = req.WithContext(context.WithValue(req.Context(), contextKey, claims))
+		next.ServeHTTP(w, req)
+	})
+}
+
+func (r *routes) recoverPanic(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				w.Header().Set("Connection", "close")
+				r.serverError(w, req, fmt.Errorf("%s", err), "recover panic")
+			}
+		}()
+
+		next.ServeHTTP(w, req)
+	})
+}
+
+func secureHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Security-Policy", "default-src 'self';")
+		w.Header().Set("Referrer-Policy", "origin-when-cross-origin")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "deny")
+		w.Header().Set("X-XSS-Protection", "0")
+
 		next.ServeHTTP(w, req)
 	})
 }

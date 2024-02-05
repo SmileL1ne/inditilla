@@ -32,5 +32,6 @@ func NewRouter(logger logger.ILogger, services *service.Services) http.Handler {
 	router.Handler(http.MethodGet, "/v1/user/profile/:id", secured.ThenFunc(r.userProfile))
 	router.Handler(http.MethodPatch, "/v1/user/profile/:id", secured.ThenFunc(r.userUpdate))
 
-	return router
+	standard := alice.New(r.recoverPanic, secureHeaders)
+	return standard.Then(router)
 }
