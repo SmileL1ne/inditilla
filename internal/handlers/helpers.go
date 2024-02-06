@@ -95,7 +95,7 @@ func (r *routes) editConflict(w http.ResponseWriter, req *http.Request, validati
 }
 
 func (r *routes) unprocessableEntity(w http.ResponseWriter, req *http.Request, validations map[string]string, location string) {
-	r.sendErrorResponse(w, req, http.StatusUnprocessableEntity, "invalid input data", nil, location)
+	r.sendErrorResponse(w, req, http.StatusUnprocessableEntity, "invalid input data", validations, location)
 }
 
 func (r *routes) notFound(w http.ResponseWriter, req *http.Request, location string) {
